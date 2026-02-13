@@ -547,7 +547,7 @@ export default function NovaVendaInternet() {
               ) : (
                 vendasList.map((v) => (
                   <TableRow key={v.id}>
-                    <TableCell>{v.data_venda}</TableCell>
+                    <TableCell>{v.data_venda.split("-").reverse().join("/")}</TableCell>
                     <TableCell>{v.vendedor?.nome ?? "—"}</TableCell>
                     <TableCell>{v.produto?.nome ?? "—"}</TableCell>
                     <TableCell>{v.pacote?.nome ?? "—"}</TableCell>
