@@ -179,7 +179,7 @@ Para: vendedores, produtos/pacotes sky, produtos/pacotes internet, formas pagame
 
 ## Checklist de aceitação (o que você verá funcionando)
 - Login com 3 perfis fixos e menu correto para cada um
-- Dashboards somente leitura para todos (ninguém edita por ali)
+- Dashboards somente leitura para todos (ninguém edita lá)
 - Gerente/admin conseguem cadastrar vendas; usuario não vê nem acessa as rotas
 - Admin consegue cadastrar dados administrativos e mexer em metas/CRUDs
 - Metas aparecem em “meta vs realizado” nos dashboards
