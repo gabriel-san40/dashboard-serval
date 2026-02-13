@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { format, startOfMonth } from "date-fns";
+import { Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
@@ -15,8 +17,50 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Option = { id: string; nome: string };
+
+type VendaRow = {
+  id: string;
+  data_venda: string;
+  cidade: string | null;
+  seguro: boolean;
+  vendedor_id: string;
+  produto_id: string;
+  pacote_id: string | null;
+  forma_pagamento_id: string;
+  origem_lead_id: string | null;
+  vendedor?: { nome: string } | null;
+  produto?: { nome: string } | null;
+  pacote?: { nome: string } | null;
+  origem?: { nome: string } | null;
+  forma?: { nome: string } | null;
+};
 
 type FormValues = {
   data_venda: string;
@@ -54,6 +98,20 @@ export default function NovaVendaSky() {
   const [pacotes, setPacotes] = useState<Option[]>([]);
   const [formas, setFormas] = useState<Option[]>([]);
   const [origens, setOrigens] = useState<Option[]>([]);
+
+  const today = format(new Date(), "yyyy-MM-dd");
+  const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
+
+  const [listInicio, setListInicio] = useState(today);
+  const [listFim, setListFim] = useState(today);
+  const [vendasList, setVendasList] = useState<VendaRow[]>([]);
+  const [loadingList, setLoadingList] = useState(false);
+  const [editingVenda, setEditingVenda] = useState<VendaRow | null>(null);
+  const [editValues, setEditValues] = useState<FormValues | null>(null);
+  const [editPacotes, setEditPacotes] = useState<Option[]>([]);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -148,6 +206,134 @@ export default function NovaVendaSky() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [produtoId]);
 
+  const fetchVendas = useCallback(async () => {
+    setLoadingList(true);
+    try {
+      const { data, error } = await supabase
+        .from("vendas_sky")
+        .select(
+          [
+            "id", "data_venda", "cidade", "seguro",
+            "vendedor_id", "produto_id", "pacote_id", "forma_pagamento_id", "origem_lead_id",
+            "vendedor:vendedores(nome)",
+            "produto:produtos_sky(nome)",
+            "pacote:pacotes_sky(nome)",
+            "origem:origens_lead(nome)",
+            "forma:formas_pagamento(nome)",
+          ].join(","),
+        )
+        .eq("ativo", true)
+        .is("deleted_at", null)
+        .gte("data_venda", listInicio)
+        .lte("data_venda", listFim)
+        .order("data_venda", { ascending: false });
+
+      if (error) throw error;
+      setVendasList((data ?? []) as unknown as VendaRow[]);
+    } catch (e: any) {
+      toast({ title: "Erro ao carregar vendas", description: e?.message, variant: "destructive" });
+    } finally {
+      setLoadingList(false);
+    }
+  }, [listInicio, listFim]);
+
+  useEffect(() => {
+    void fetchVendas();
+  }, [fetchVendas]);
+
+  const openEdit = async (v: VendaRow) => {
+    setEditingVenda(v);
+    setEditValues({
+      data_venda: v.data_venda,
+      vendedor_id: v.vendedor_id,
+      produto_id: v.produto_id,
+      pacote_id: v.pacote_id,
+      forma_pagamento_id: v.forma_pagamento_id,
+      seguro: v.seguro,
+      cidade: v.cidade ?? "",
+      origem_lead_id: v.origem_lead_id ?? "",
+    });
+
+    if (v.produto_id) {
+      const { data } = await supabase
+        .from("pacotes_sky")
+        .select("id, nome")
+        .eq("produto_id", v.produto_id)
+        .eq("ativo", true)
+        .is("deleted_at", null)
+        .order("nome");
+      setEditPacotes((data ?? []) as Option[]);
+    } else {
+      setEditPacotes([]);
+    }
+  };
+
+  const handleEditProdutoChange = async (prodId: string) => {
+    setEditValues((p) => p ? { ...p, produto_id: prodId, pacote_id: null } : p);
+    if (prodId) {
+      const { data } = await supabase
+        .from("pacotes_sky")
+        .select("id, nome")
+        .eq("produto_id", prodId)
+        .eq("ativo", true)
+        .is("deleted_at", null)
+        .order("nome");
+      setEditPacotes((data ?? []) as Option[]);
+    } else {
+      setEditPacotes([]);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingVenda || !editValues) return;
+    setSavingEdit(true);
+    try {
+      const { error } = await supabase
+        .from("vendas_sky")
+        .update({
+          data_venda: editValues.data_venda,
+          vendedor_id: editValues.vendedor_id,
+          produto_id: editValues.produto_id,
+          pacote_id: editValues.pacote_id,
+          forma_pagamento_id: editValues.forma_pagamento_id,
+          seguro: editValues.seguro,
+          cidade: editValues.cidade.trim(),
+          origem_lead_id: editValues.origem_lead_id || null,
+        })
+        .eq("id", editingVenda.id);
+
+      if (error) throw error;
+      toast({ title: "Venda atualizada" });
+      setEditingVenda(null);
+      setEditValues(null);
+      void fetchVendas();
+    } catch (e: any) {
+      toast({ title: "Erro ao atualizar", description: e?.message, variant: "destructive" });
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deletingId) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("vendas_sky")
+        .update({ ativo: false, deleted_at: new Date().toISOString() })
+        .eq("id", deletingId);
+
+      if (error) throw error;
+      toast({ title: "Venda excluída" });
+      setDeletingId(null);
+      void fetchVendas();
+    } catch (e: any) {
+      toast({ title: "Erro ao excluir", description: e?.message, variant: "destructive" });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const onSubmit = async (values: FormValues) => {
     // Pacote obrigatório condicional
     if (pacoteObrigatorio && !values.pacote_id) {
@@ -182,6 +368,7 @@ export default function NovaVendaSky() {
         origem_lead_id: "",
       });
       setPacotes([]);
+      void fetchVendas();
     } catch (e: any) {
       toast({
         title: "Erro ao salvar",
@@ -338,6 +525,172 @@ export default function NovaVendaSky() {
           </Button>
         </div>
       </form>
+
+      {/* Lista de vendas */}
+      <section className="space-y-4">
+        <h2 className="text-2xl font-semibold tracking-tight">Vendas cadastradas</h2>
+
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="space-y-1">
+            <Label>Início</Label>
+            <Input type="date" className="h-10" value={listInicio} onChange={(e) => setListInicio(e.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <Label>Fim</Label>
+            <Input type="date" className="h-10" value={listFim} onChange={(e) => setListFim(e.target.value)} />
+          </div>
+          <Button type="button" variant="secondary" className="h-10" onClick={() => { setListInicio(today); setListFim(today); }}>
+            Hoje
+          </Button>
+        </div>
+
+        <div className="rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Data</TableHead>
+                <TableHead>Vendedor</TableHead>
+                <TableHead>Produto</TableHead>
+                <TableHead>Pacote</TableHead>
+                <TableHead>Cidade</TableHead>
+                <TableHead>Seguro</TableHead>
+                <TableHead>Origem</TableHead>
+                <TableHead>Forma Pgto</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loadingList ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center text-muted-foreground">
+                    Carregando…
+                  </TableCell>
+                </TableRow>
+              ) : vendasList.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center text-muted-foreground">
+                    Nenhuma venda encontrada no período.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                vendasList.map((v) => (
+                  <TableRow key={v.id}>
+                    <TableCell>{v.data_venda}</TableCell>
+                    <TableCell>{v.vendedor?.nome ?? "—"}</TableCell>
+                    <TableCell>{v.produto?.nome ?? "—"}</TableCell>
+                    <TableCell>{v.pacote?.nome ?? "—"}</TableCell>
+                    <TableCell>{v.cidade ?? "—"}</TableCell>
+                    <TableCell>{v.seguro ? "Sim" : "Não"}</TableCell>
+                    <TableCell>{v.origem?.nome ?? "—"}</TableCell>
+                    <TableCell>{v.forma?.nome ?? "—"}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(v)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeletingId(v.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </section>
+
+      {/* Dialog de edição */}
+      <Dialog open={!!editingVenda} onOpenChange={(open) => { if (!open) { setEditingVenda(null); setEditValues(null); } }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Venda Sky</DialogTitle>
+          </DialogHeader>
+          {editValues && (
+            <div className="grid gap-4 py-4 lg:grid-cols-2">
+              <div className="space-y-1">
+                <Label>Data</Label>
+                <Input type="date" className="h-10" value={editValues.data_venda} onChange={(e) => setEditValues((p) => p ? { ...p, data_venda: e.target.value } : p)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Cidade</Label>
+                <Input className="h-10" value={editValues.cidade} onChange={(e) => setEditValues((p) => p ? { ...p, cidade: e.target.value } : p)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Vendedor</Label>
+                <Select value={editValues.vendedor_id} onValueChange={(v) => setEditValues((p) => p ? { ...p, vendedor_id: v } : p)}>
+                  <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {vendedores.map((o) => <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Forma de pagamento</Label>
+                <Select value={editValues.forma_pagamento_id} onValueChange={(v) => setEditValues((p) => p ? { ...p, forma_pagamento_id: v } : p)}>
+                  <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {formas.map((o) => <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Produto</Label>
+                <Select value={editValues.produto_id} onValueChange={(v) => handleEditProdutoChange(v)}>
+                  <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {produtos.map((o) => <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Pacote</Label>
+                <Select value={editValues.pacote_id ?? ""} onValueChange={(v) => setEditValues((p) => p ? { ...p, pacote_id: v || null } : p)} disabled={editPacotes.length === 0}>
+                  <SelectTrigger className="h-10"><SelectValue placeholder={editPacotes.length ? "Selecione" : "Sem pacotes"} /></SelectTrigger>
+                  <SelectContent>
+                    {editPacotes.map((o) => <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Origem do lead</Label>
+                <Select value={editValues.origem_lead_id} onValueChange={(v) => setEditValues((p) => p ? { ...p, origem_lead_id: v } : p)}>
+                  <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {origens.map((o) => <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Seguro</Label>
+                <div className="flex h-10 items-center justify-between rounded-md border bg-background px-4">
+                  <span className="text-sm text-muted-foreground">Adicionar seguro?</span>
+                  <Switch checked={editValues.seguro} onCheckedChange={(v) => setEditValues((p) => p ? { ...p, seguro: v } : p)} />
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setEditingVenda(null); setEditValues(null); }}>Cancelar</Button>
+            <Button onClick={handleSaveEdit} disabled={savingEdit}>{savingEdit ? "Salvando…" : "Salvar"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* AlertDialog de exclusão */}
+      <AlertDialog open={!!deletingId} onOpenChange={(open) => { if (!open) setDeletingId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir venda</AlertDialogTitle>
+            <AlertDialogDescription>Tem certeza que deseja excluir esta venda? Esta ação não pode ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleting}>{deleting ? "Excluindo…" : "Excluir"}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }
