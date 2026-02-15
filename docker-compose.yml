@@ -1,0 +1,48 @@
+version: "3.8"
+
+services:
+  dashboard:
+    image: dashboard:latest
+    networks:
+      - servalnet
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+    deploy:
+      replicas: 2  # Aumentei para 2 para garantir zero downtime real
+      placement:
+        constraints:
+          - node.role == manager 
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+        monitor: 30s
+        max_failure_ratio: 0.3
+      rollback_config:
+        parallelism: 1
+        delay: 5s
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.dashboard.rule=Host(`dashboard.servalmollica.cloud`)"
+        - "traefik.http.routers.dashboard.entrypoints=websecure"
+        - "traefik.http.routers.dashboard.tls.certresolver=letsencryptresolver"
+        - "traefik.http.routers.dashboard.service=dashboard"
+        - "traefik.http.services.dashboard.loadbalancer.server.port=80"
+        - "traefik.http.services.dashboard.loadbalancer.passHostHeader=true"
+        # Health check para o Traefik
+        - "traefik.http.services.dashboard.loadbalancer.healthcheck.path=/"
+        - "traefik.http.services.dashboard.loadbalancer.healthcheck.interval=10s"
+        - "traefik.http.services.dashboard.loadbalancer.healthcheck.timeout=3s"
+
+networks:
+  servalnet:
+    external: true
