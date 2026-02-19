@@ -1,0 +1,57 @@
+name: Deploy Dashboard
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          # Passa os build args como variáveis de ambiente para o script SSH
+          envs: VITE_SUPABASE_PROJECT_ID,VITE_SUPABASE_PUBLISHABLE_KEY,VITE_SUPABASE_URL
+          script: |
+            set -e
+
+            APP_DIR="/root/dashboard"       # ← ajuste para o caminho do projeto na VPS
+            STACK_NAME="dashboard"            # ← ajuste para o nome da sua stack (docker stack ls)
+            SERVICE_NAME="${STACK_NAME}_dashboard"
+            SHA=$(cd $APP_DIR && git rev-parse --short HEAD 2>/dev/null || echo "pre")
+
+            echo "🔄 Puxando código atualizado..."
+            cd $APP_DIR
+            git pull origin main
+
+            NEW_SHA=$(git rev-parse --short HEAD)
+            IMAGE_TAG="dashboard:${NEW_SHA}"
+
+            echo "🏗️ Buildando imagem: $IMAGE_TAG"
+            docker build \
+              --build-arg VITE_SUPABASE_PROJECT_ID="$VITE_SUPABASE_PROJECT_ID" \
+              --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="$VITE_SUPABASE_PUBLISHABLE_KEY" \
+              --build-arg VITE_SUPABASE_URL="$VITE_SUPABASE_URL" \
+              -t $IMAGE_TAG \
+              -t dashboard:latest \
+              .
+
+            echo "🚀 Atualizando serviço no Swarm..."
+            docker service update \
+              --image $IMAGE_TAG \
+              $SERVICE_NAME
+
+            echo "🧹 Limpando imagens antigas..."
+            docker image prune -f
+
+            echo "✅ Deploy concluído! Imagem: $IMAGE_TAG"
+            docker service ps $SERVICE_NAME
+        env:
+          VITE_SUPABASE_PROJECT_ID: ${{ secrets.VITE_SUPABASE_PROJECT_ID }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
