@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { format, startOfMonth } from "date-fns";
 import { Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { todayLocal } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -107,7 +108,7 @@ export default function NovaVendaInternet() {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      data_venda: new Date().toISOString().slice(0, 10),
+      data_venda: todayLocal(),
       vendedor_id: "",
       produto_id: "",
       pacote_id: null,
@@ -343,7 +344,7 @@ export default function NovaVendaInternet() {
       toast({ title: "Venda Internet cadastrada" });
 
       form.reset({
-        data_venda: new Date().toISOString().slice(0, 10),
+        data_venda: todayLocal(),
         vendedor_id: "",
         produto_id: "",
         pacote_id: null,

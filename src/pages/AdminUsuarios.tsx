@@ -78,6 +78,7 @@ const AdminUsuarios = () => {
             <div className="space-y-2">
               <Label>Role</Label>
               <Input value={u.role} readOnly className="h-12 text-base" />
+              <p className="text-sm invisible">‎</p>
             </div>
 
             <div className="space-y-2">
@@ -89,6 +90,7 @@ const AdminUsuarios = () => {
                 placeholder="Defina uma senha"
                 className="h-12 text-base"
               />
+              <p className="text-sm invisible">‎</p>
             </div>
           </div>
         ))}
@@ -98,11 +100,6 @@ const AdminUsuarios = () => {
             {loading ? "Processando…" : "Provisionar / Atualizar"}
           </Button>
         </div>
-
-        <p className="text-sm text-muted-foreground">
-          Observação: esta página é restrita a <strong>admin</strong>. Para o primeiro bootstrap, você precisa ter ao menos um usuário admin
-          com role configurada.
-        </p>
       </section>
     </section>
   );

@@ -7,6 +7,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { todayLocal } from "@/lib/utils";
 
 const int0 = z.coerce.number().int().min(0, "Mínimo 0");
 
@@ -36,7 +37,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 const defaultValues: FormValues = {
-  data: new Date().toISOString().slice(0, 10),
+  data: todayLocal(),
   total_leads: 0,
   ia_leads: 0,
   robo_leads: 0,
@@ -145,7 +146,7 @@ export default function NovoDadoAdmin() {
       if (error) throw error;
 
       toast({ title: "Dado administrativo cadastrado" });
-      form.reset({ ...defaultValues, data: new Date().toISOString().slice(0, 10) });
+      form.reset({ ...defaultValues, data: todayLocal() });
     } catch (e: any) {
       toast({
         title: "Erro ao salvar",

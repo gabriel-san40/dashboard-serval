@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CrudResource } from "@/components/admin/CrudResource";
 import { MetaVendas } from "@/components/admin/MetaVendas";
+import { GastosFacebookAds } from "@/components/admin/GastosFacebookAds";
 
 const AdminCadastros = () => {
   return (
@@ -20,6 +21,7 @@ const AdminCadastros = () => {
           <TabsTrigger value="formas">Formas Pgto</TabsTrigger>
           <TabsTrigger value="origens">Origens Lead</TabsTrigger>
           <TabsTrigger value="metas">Metas de Vendas</TabsTrigger>
+          <TabsTrigger value="gastos_fb">Gastos Facebook Ads</TabsTrigger>
         </TabsList>
 
         <TabsContent value="vendedores">
@@ -99,6 +101,10 @@ const AdminCadastros = () => {
 
         <TabsContent value="metas">
           <MetaVendas />
+        </TabsContent>
+
+        <TabsContent value="gastos_fb">
+          <GastosFacebookAds />
         </TabsContent>
       </Tabs>
     </section>

@@ -134,6 +134,36 @@ export type Database = {
         }
         Relationships: []
       }
+      gastos_facebook_ads: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          data: string
+          deleted_at: string | null
+          id: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          data: string
+          deleted_at?: string | null
+          id?: string
+          updated_at?: string
+          valor: number
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          data?: string
+          deleted_at?: string | null
+          id?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: []
+      }
       formas_pagamento: {
         Row: {
           ativo: boolean
