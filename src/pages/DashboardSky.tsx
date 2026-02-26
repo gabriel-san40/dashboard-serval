@@ -50,7 +50,12 @@ type Filters = {
   produtoId: string | "all";
 };
 
-const META_CHAVE_DEFAULT = "meta_vendas_sky";
+const META_CHAVES_SKY = [
+  { chave: "meta_vendas_sky_pos_pago", label: "Pós Pago" },
+  { chave: "meta_vendas_sky_sky_plus", label: "Sky+" },
+  { chave: "meta_vendas_sky_pre_pago", label: "Pré Pago" },
+  { chave: "meta_vendas_sky_parabolica", label: "Parabólica" },
+] as const;
 
 function toISODate(d: Date) {
   return format(d, "yyyy-MM-dd");
@@ -93,19 +98,27 @@ export default function DashboardSky() {
     },
   });
 
-  const { data: meta, isLoading: loadingMeta } = useQuery({
-    queryKey: ["sky", "meta", META_CHAVE_DEFAULT],
+  const { data: metaData, isLoading: loadingMeta } = useQuery({
+    queryKey: ["sky", "meta", META_CHAVES_SKY],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("configuracoes")
         .select("chave, valor_numeric")
-        .eq("chave", META_CHAVE_DEFAULT)
+        .in("chave", META_CHAVES_SKY.map((m) => m.chave))
         .eq("ativo", true)
-        .is("deleted_at", null)
-        .maybeSingle();
+        .is("deleted_at", null);
 
       if (error) throw error;
-      return data?.valor_numeric ?? null;
+      if (!data || data.length === 0) return null;
+
+      const porChave = Object.fromEntries(data.map((r) => [r.chave, r.valor_numeric ?? 0]));
+      const individuais = META_CHAVES_SKY.map((m) => ({
+        label: m.label,
+        valor: porChave[m.chave] ?? 0,
+      }));
+      const total = individuais.reduce((acc, i) => acc + i.valor, 0);
+
+      return total > 0 ? { individuais, total } : null;
     },
   });
 
@@ -161,7 +174,7 @@ export default function DashboardSky() {
         { event: "*", schema: "public", table: "configuracoes" },
         (payload) => {
           const next = (payload as any)?.new?.chave ?? (payload as any)?.old?.chave;
-          if (!next || next === META_CHAVE_DEFAULT) {
+          if (!next || META_CHAVES_SKY.some((m) => m.chave === next)) {
             qc.invalidateQueries({ queryKey: ["sky", "meta"] });
           }
         },
@@ -217,12 +230,11 @@ export default function DashboardSky() {
   }, [vendas]);
 
   const progressoMeta = useMemo(() => {
-    const m = meta ?? null;
-    if (!m || m <= 0) return null;
+    if (!metaData) return null;
     const total = stats.total;
-    const pct = Math.min(100, (total / Number(m)) * 100);
-    return { meta: Number(m), total, pct };
-  }, [meta, stats.total]);
+    const pct = Math.min(100, (total / metaData.total) * 100);
+    return { meta: metaData.total, individuais: metaData.individuais, total, pct };
+  }, [metaData, stats.total]);
 
   const busy = loadingOptions || loadingMeta || loadingVendas;
 
@@ -364,7 +376,7 @@ export default function DashboardSky() {
 
         <Card className="p-2">
           <CardHeader>
-            <CardTitle className="text-xl">Meta</CardTitle>
+            <CardTitle className="text-xl">Meta Total</CardTitle>
           </CardHeader>
           <CardContent>
             {loadingMeta ? (
@@ -376,11 +388,33 @@ export default function DashboardSky() {
               </>
             ) : (
               <div className="text-base text-muted-foreground">
-                Meta não configurada em <code>{META_CHAVE_DEFAULT}</code>.
+                Meta não configurada. Defina em Cadastros &gt; Metas de Vendas.
               </div>
             )}
           </CardContent>
         </Card>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-4">
+        {META_CHAVES_SKY.map((m) => {
+          const item = progressoMeta?.individuais.find((i) => i.label === m.label);
+          return (
+            <Card key={m.chave} className="p-2">
+              <CardHeader>
+                <CardTitle className="text-xl">Meta {m.label}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingMeta ? (
+                  <div className="text-base text-muted-foreground">Carregando…</div>
+                ) : item && item.valor > 0 ? (
+                  <div className="text-4xl font-semibold">{item.valor}</div>
+                ) : (
+                  <div className="text-base text-muted-foreground">Não definida</div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
       </section>
 
       <section className="grid gap-6 lg:grid-cols-2">

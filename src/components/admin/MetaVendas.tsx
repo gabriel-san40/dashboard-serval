@@ -6,7 +6,10 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 
 const META_KEYS = [
-  { chave: "meta_vendas_sky", label: "Meta de Vendas Sky" },
+  { chave: "meta_vendas_sky_pos_pago", label: "Meta Sky Pós Pago" },
+  { chave: "meta_vendas_sky_sky_plus", label: "Meta Sky Sky+" },
+  { chave: "meta_vendas_sky_pre_pago", label: "Meta Sky Pré Pago" },
+  { chave: "meta_vendas_sky_parabolica", label: "Meta Sky Parabólica" },
   { chave: "meta_vendas_internet", label: "Meta de Vendas Internet" },
 ] as const;
 
@@ -15,10 +18,9 @@ type MetaValues = Record<string, string>;
 export function MetaVendas() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [values, setValues] = useState<MetaValues>({
-    meta_vendas_sky: "",
-    meta_vendas_internet: "",
-  });
+  const [values, setValues] = useState<MetaValues>(() =>
+    Object.fromEntries(META_KEYS.map((k) => [k.chave, ""])),
+  );
 
   const load = async () => {
     setLoading(true);
@@ -35,10 +37,9 @@ export function MetaVendas() {
 
       if (error) throw error;
 
-      const next: MetaValues = {
-        meta_vendas_sky: "",
-        meta_vendas_internet: "",
-      };
+      const next: MetaValues = Object.fromEntries(
+        META_KEYS.map((k) => [k.chave, ""]),
+      );
 
       data?.forEach((row) => {
         if (row.valor_numeric != null) {
@@ -117,7 +118,7 @@ export function MetaVendas() {
       <header>
         <h2 className="text-lg font-semibold">Metas de Vendas</h2>
         <p className="text-sm text-muted-foreground">
-          Defina as metas mensais de vendas para Sky e Internet. Esses valores são usados nos dashboards.
+          Defina as metas mensais de vendas para os produtos Sky e Internet. Esses valores são usados nos dashboards.
         </p>
       </header>
 

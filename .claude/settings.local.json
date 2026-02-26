@@ -4,7 +4,8 @@
       "Bash(npm install)",
       "Bash(npm run dev:*)",
       "Bash(npx tsc:*)",
-      "Bash(npx vite build:*)"
+      "Bash(npx vite build:*)",
+      "Bash(grep -E \"metas|vendedores|configuracoes|gastos_facebook\" supabase/migrations/*.sql)"
     ]
   }
 }
