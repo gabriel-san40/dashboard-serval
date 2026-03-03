@@ -593,6 +593,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_soft_delete: {
+        Args: {
+          _table: string
+          _id: string
+        }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

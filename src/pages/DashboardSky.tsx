@@ -11,6 +11,10 @@ import {
   CartesianGrid,
   BarChart,
   Bar,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -36,11 +40,13 @@ type VendaRow = {
   vendedor_id: string;
   produto_id: string;
   pacote_id: string | null;
+  forma_pagamento_id: string;
   origem_lead_id: string | null;
   vendedor?: { nome: string } | null;
   produto?: { nome: string } | null;
   pacote?: { nome: string } | null;
   origem?: { nome: string } | null;
+  forma?: { nome: string } | null;
 };
 
 type Filters = {
@@ -66,6 +72,7 @@ function monthKey(isoDate: string) {
 }
 
 const TICK_STYLE = { fontSize: 14 };
+const PIE_COLORS = ["hsl(217, 91%, 60%)", "hsl(142, 71%, 45%)", "hsl(38, 92%, 50%)", "hsl(0, 84%, 60%)"];
 
 export default function DashboardSky() {
   const qc = useQueryClient();
@@ -139,11 +146,13 @@ export default function DashboardSky() {
             "vendedor_id",
             "produto_id",
             "pacote_id",
+            "forma_pagamento_id",
             "origem_lead_id",
             "vendedor:vendedores(nome)",
             "produto:produtos_sky(nome)",
             "pacote:pacotes_sky(nome)",
             "origem:origens_lead(nome)",
+            "forma:formas_pagamento(nome)",
           ].join(","),
         )
         .eq("ativo", true)
@@ -212,7 +221,12 @@ export default function DashboardSky() {
 
     const topVendedor = rankingVendedor[0]?.nome ?? "—";
 
-    return { total, comSeguro, percSeguro, topVendedor, rankingVendedor, rankingProduto };
+    const vendasPorProdutoNome: Record<string, number> = {};
+    for (const { nome, total: t } of byProduto.values()) {
+      vendasPorProdutoNome[nome.toLowerCase()] = t;
+    }
+
+    return { total, comSeguro, percSeguro, topVendedor, rankingVendedor, rankingProduto, vendasPorProdutoNome };
   }, [vendas]);
 
   const serieMensal = useMemo(() => {
@@ -227,6 +241,24 @@ export default function DashboardSky() {
     return Array.from(m.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([k, total]) => ({ mes: k, total }));
+  }, [vendas]);
+
+  const pagamentoPosPago = useMemo(() => {
+    const list = vendas ?? [];
+    const posPago = list.filter((v) => {
+      const nome = v.produto?.nome?.toLowerCase() ?? "";
+      return nome.includes("pós pago") || nome.includes("pos pago");
+    });
+
+    if (posPago.length === 0) return [];
+
+    const byForma = new Map<string, number>();
+    for (const v of posPago) {
+      const formaNome = v.forma?.nome ?? "Outros";
+      byForma.set(formaNome, (byForma.get(formaNome) ?? 0) + 1);
+    }
+
+    return Array.from(byForma.entries()).map(([nome, valor]) => ({ nome, valor }));
   }, [vendas]);
 
   const progressoMeta = useMemo(() => {
@@ -397,19 +429,33 @@ export default function DashboardSky() {
 
       <section className="grid gap-6 lg:grid-cols-4">
         {META_CHAVES_SKY.map((m) => {
-          const item = progressoMeta?.individuais.find((i) => i.label === m.label);
+          const metaItem = progressoMeta?.individuais.find((i) => i.label === m.label);
+          const labelLower = m.label.toLowerCase();
+          const vendasCount = Object.entries(stats.vendasPorProdutoNome).find(
+            ([nome]) => nome.includes(labelLower) || labelLower.includes(nome),
+          )?.[1] ?? 0;
           return (
             <Card key={m.chave} className="p-2">
               <CardHeader>
-                <CardTitle className="text-xl">Meta {m.label}</CardTitle>
+                <CardTitle className="text-xl">{m.label}</CardTitle>
               </CardHeader>
               <CardContent>
-                {loadingMeta ? (
+                {loadingVendas ? (
                   <div className="text-base text-muted-foreground">Carregando…</div>
-                ) : item && item.valor > 0 ? (
-                  <div className="text-4xl font-semibold">{item.valor}</div>
                 ) : (
-                  <div className="text-base text-muted-foreground">Não definida</div>
+                  <>
+                    <div className="text-6xl font-semibold">
+                      {vendasCount}
+                      {metaItem && metaItem.valor > 0 && (
+                        <span className="text-4xl text-muted-foreground font-normal"> / {metaItem.valor}</span>
+                      )}
+                    </div>
+                    {metaItem && metaItem.valor > 0 && (
+                      <div className="mt-2 text-xl text-muted-foreground">
+                        {Math.min(100, (vendasCount / metaItem.valor) * 100).toFixed(0)}% da meta
+                      </div>
+                    )}
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -437,6 +483,41 @@ export default function DashboardSky() {
 
         <Card className="min-h-[480px]">
           <CardHeader>
+            <CardTitle className="text-xl">Pós Pago — Forma de Pagamento</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[420px]">
+            {loadingVendas ? (
+              <div className="text-base text-muted-foreground">Carregando…</div>
+            ) : pagamentoPosPago.length === 0 ? (
+              <div className="text-base text-muted-foreground">Sem vendas Pós Pago no período.</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pagamentoPosPago}
+                    dataKey="valor"
+                    nameKey="nome"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={140}
+                    label={({ nome, percent }) => `${nome}: ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {pagamentoPosPago.map((_, i) => (
+                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => [value, "Vendas"]} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-2">
+        <Card className="min-h-[480px]">
+          <CardHeader>
             <CardTitle className="text-xl">Ranking Vendedores (Top 5)</CardTitle>
           </CardHeader>
           <CardContent className="h-[420px]">
@@ -451,9 +532,7 @@ export default function DashboardSky() {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-      </section>
 
-      <section className="grid gap-6 lg:grid-cols-2">
         <Card className="min-h-[480px]">
           <CardHeader>
             <CardTitle className="text-xl">Top Produtos (Top 5)</CardTitle>
@@ -468,17 +547,6 @@ export default function DashboardSky() {
                 <Bar dataKey="total" fill="hsl(var(--primary))" radius={[6, 6, 6, 6]} />
               </BarChart>
             </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="min-h-[480px]">
-          <CardHeader>
-            <CardTitle className="text-xl">Status</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="text-base text-muted-foreground">
-              Realtime: ativo (vendas_sky/configuracoes). Quando houver alteração, os dados são atualizados automaticamente.
-            </div>
           </CardContent>
         </Card>
       </section>

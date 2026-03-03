@@ -209,10 +209,10 @@ export function CrudResource({ resource }: Props) {
 
   const handleDeactivate = async (row: NomeRow | WithProdutoRow) => {
     try {
-      const { error } = await supabase
-        .from(resource.table)
-        .update({ ativo: false, deleted_at: new Date().toISOString() } as any)
-        .eq("id", row.id);
+      const { error } = await supabase.rpc("admin_soft_delete", {
+        _table: resource.table,
+        _id: row.id,
+      });
 
       if (error) throw error;
 
