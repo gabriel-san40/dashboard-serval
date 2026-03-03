@@ -15,7 +15,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          # Passa os build args como variáveis de ambiente para o script SSH
+          # Passa os build args como variáveis de ambiente para o script SSH SSH
           envs: VITE_SUPABASE_PROJECT_ID,VITE_SUPABASE_PUBLISHABLE_KEY,VITE_SUPABASE_URL
           script: |
             set -e
