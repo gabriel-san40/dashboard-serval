@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { format, parseISO, startOfDay, endOfDay, startOfMonth } from "date-fns";
+import { format, parseISO, startOfDay, endOfDay, startOfMonth, getDaysInMonth, differenceInCalendarDays } from "date-fns";
 import {
   LineChart,
   Line,
@@ -170,6 +170,20 @@ export default function DashboardSky() {
     },
   });
 
+  const { data: statusData, isLoading: loadingStatus } = useQuery({
+    queryKey: ["status"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("status")
+        .select("habilitadas, pagas, instaladas")
+        .limit(1)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
   useEffect(() => {
     const channel = supabase
       .channel("rt-dashboard-sky")
@@ -177,6 +191,11 @@ export default function DashboardSky() {
         "postgres_changes",
         { event: "*", schema: "public", table: "vendas_sky" },
         () => qc.invalidateQueries({ queryKey: ["sky", "vendas"] }),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "status" },
+        () => qc.invalidateQueries({ queryKey: ["status"] }),
       )
       .on(
         "postgres_changes",
@@ -267,6 +286,34 @@ export default function DashboardSky() {
     const pct = Math.min(100, (total / metaData.total) * 100);
     return { meta: metaData.total, individuais: metaData.individuais, total, pct };
   }, [metaData, stats.total]);
+
+  const projecaoPosPago = useMemo(() => {
+    const list = vendas ?? [];
+    const now = new Date();
+    const inicioMes = startOfMonth(now);
+    const diasNoMes = getDaysInMonth(now);
+    const diasDecorridos = differenceInCalendarDays(now, inicioMes) + 1;
+
+    const vendasPosPagoMes = list.filter((v) => {
+      const nome = v.produto?.nome?.toLowerCase() ?? "";
+      const dataVenda = v.data_venda;
+      const mesAtual = format(now, "yyyy-MM");
+      return (
+        (nome.includes("pós pago") || nome.includes("pos pago")) &&
+        dataVenda.startsWith(mesAtual)
+      );
+    });
+
+    const realizadas = vendasPosPagoMes.length;
+    const mediaDiaria = diasDecorridos > 0 ? realizadas / diasDecorridos : 0;
+    const projecao = Math.round(mediaDiaria * diasNoMes);
+
+    const metaPosPago = progressoMeta?.individuais.find(
+      (i) => i.label.toLowerCase() === "pós pago"
+    )?.valor ?? 0;
+
+    return { realizadas, mediaDiaria, projecao, diasDecorridos, diasNoMes, metaPosPago };
+  }, [vendas, progressoMeta]);
 
   const busy = loadingOptions || loadingMeta || loadingVendas;
 
@@ -461,6 +508,91 @@ export default function DashboardSky() {
             </Card>
           );
         })}
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-3">
+        <Card className="p-2">
+          <CardHeader>
+            <CardTitle className="text-xl">Habilitadas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-6xl font-bold tracking-tight">
+              {loadingStatus ? "—" : (statusData?.habilitadas ?? 0)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="p-2">
+          <CardHeader>
+            <CardTitle className="text-xl">Pagas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-6xl font-bold tracking-tight">
+              {loadingStatus ? "—" : (statusData?.pagas ?? 0)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="p-2">
+          <CardHeader>
+            <CardTitle className="text-xl">Instaladas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-6xl font-bold tracking-tight">
+              {loadingStatus ? "—" : (statusData?.instaladas ?? 0)}
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-1">
+        <Card className="p-2">
+          <CardHeader>
+            <CardTitle className="text-xl">Projeção de Vendas — Pós Pago</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingVendas || loadingMeta ? (
+              <div className="text-base text-muted-foreground">Carregando…</div>
+            ) : (
+              <div className="grid gap-6 lg:grid-cols-4">
+                <div>
+                  <div className="text-base text-muted-foreground">Realizadas</div>
+                  <div className="text-5xl font-bold tracking-tight">{projecaoPosPago.realizadas}</div>
+                  <div className="mt-1 text-sm text-muted-foreground">
+                    em {projecaoPosPago.diasDecorridos} de {projecaoPosPago.diasNoMes} dias
+                  </div>
+                </div>
+                <div>
+                  <div className="text-base text-muted-foreground">Média diária</div>
+                  <div className="text-5xl font-bold tracking-tight">{projecaoPosPago.mediaDiaria.toFixed(1)}</div>
+                  <div className="mt-1 text-sm text-muted-foreground">vendas/dia</div>
+                </div>
+                <div>
+                  <div className="text-base text-muted-foreground">Projeção do mês</div>
+                  <div className="text-5xl font-bold tracking-tight">{projecaoPosPago.projecao}</div>
+                  <div className="mt-1 text-sm text-muted-foreground">
+                    {projecaoPosPago.metaPosPago > 0
+                      ? `${Math.min(100, (projecaoPosPago.projecao / projecaoPosPago.metaPosPago) * 100).toFixed(0)}% da meta`
+                      : "Meta não configurada"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-base text-muted-foreground">Meta Pós Pago</div>
+                  <div className="text-5xl font-bold tracking-tight">
+                    {projecaoPosPago.metaPosPago > 0 ? projecaoPosPago.metaPosPago : "—"}
+                  </div>
+                  <div className="mt-1 text-sm text-muted-foreground">
+                    {projecaoPosPago.metaPosPago > 0
+                      ? projecaoPosPago.projecao >= projecaoPosPago.metaPosPago
+                        ? "Projeção acima da meta"
+                        : `Faltam ~${projecaoPosPago.metaPosPago - projecaoPosPago.projecao} vendas na projeção`
+                      : "Defina em Metas de Vendas"}
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </section>
 
       <section className="grid gap-6 lg:grid-cols-2">

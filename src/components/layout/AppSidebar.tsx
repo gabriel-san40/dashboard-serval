@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useLocation } from "react-router-dom";
-import { LayoutDashboard, Shield, Users, PlusSquare, BarChart3, ClipboardList } from "lucide-react";
+import { LayoutDashboard, Shield, Users, PlusSquare, BarChart3, ClipboardList, Activity } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth, type AppRole } from "@/components/auth/AuthProvider";
 import {
@@ -26,6 +26,7 @@ const items: Item[] = [
   { title: "Início", to: "/", icon: LayoutDashboard },
   { title: "Dashboard Sky", to: "/dashboards/sky", icon: BarChart3 },
   { title: "Dashboard Internet", to: "/dashboards/internet", icon: BarChart3 },
+  { title: "Status", to: "/status", icon: Activity, allow: ["admin", "gerente"] },
   { title: "Nova venda (Sky)", to: "/vendas/sky/nova", icon: PlusSquare, allow: ["admin", "gerente"] },
   { title: "Nova venda (Internet)", to: "/vendas/internet/nova", icon: PlusSquare, allow: ["admin", "gerente"] },
   { title: "Dashboard Admin", to: "/dashboards/admin", icon: BarChart3, allow: ["admin"] },

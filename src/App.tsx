@@ -19,6 +19,7 @@ import DashboardSky from "./pages/DashboardSky";
 import DashboardInternet from "./pages/DashboardInternet";
 import DashboardAdmin from "./pages/DashboardAdmin";
 import NovoDadoAdmin from "./pages/NovoDadoAdmin";
+import StatusPage from "./pages/Status";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +43,7 @@ const App = () => (
                 <Route path="/dashboards/internet" element={<DashboardInternet />} />
 
                 <Route element={<ProtectedRoute allow={["admin", "gerente"]} />}>
+                  <Route path="/status" element={<StatusPage />} />
                   <Route path="/vendas/sky/nova" element={<NovaVendaSky />} />
                   <Route path="/vendas/internet/nova" element={<NovaVendaInternet />} />
                 </Route>
