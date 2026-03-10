@@ -380,7 +380,7 @@ export default function DashboardSky() {
           </CardHeader>
           <CardContent>
             <div className="text-6xl font-bold tracking-tight">{loadingVendas ? "—" : stats.total}</div>
-            <div className="mt-2 text-base text-muted-foreground">Vendas Sky filtradas.</div>
+            <div className="mt-2 text-base text-muted-foreground">Vendas Sky.</div>
           </CardContent>
         </Card>
 

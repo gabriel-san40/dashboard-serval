@@ -359,7 +359,7 @@ export default function DashboardInternet() {
           </CardHeader>
           <CardContent>
             <div className="text-6xl font-bold tracking-tight">{loadingVendas ? "—" : stats.total}</div>
-            <div className="mt-2 text-base text-muted-foreground">Vendas Internet filtradas.</div>
+            <div className="mt-2 text-base text-muted-foreground">Vendas Internet.</div>
           </CardContent>
         </Card>
 
