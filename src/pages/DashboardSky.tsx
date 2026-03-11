@@ -513,7 +513,7 @@ export default function DashboardSky() {
       <section className="grid gap-6 lg:grid-cols-3">
         <Card className="p-2">
           <CardHeader>
-            <CardTitle className="text-xl">Habilitadas</CardTitle>
+            <CardTitle className="text-xl">Cadastradas</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-6xl font-bold tracking-tight">

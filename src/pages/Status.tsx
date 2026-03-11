@@ -24,14 +24,14 @@ export default function Status() {
     },
   });
 
-  const [habilitadas, setHabilitadas] = useState(0);
+  const [habilitadas, setCadastradas] = useState(0);
   const [pagas, setPagas] = useState(0);
   const [instaladas, setInstaladas] = useState(0);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (status) {
-      setHabilitadas(status.habilitadas);
+      setCadastradas(status.habilitadas);
       setPagas(status.pagas);
       setInstaladas(status.instaladas);
     }
@@ -77,13 +77,13 @@ export default function Status() {
           ) : (
             <>
               <div className="space-y-2">
-                <Label className="text-lg">Habilitadas</Label>
+                <Label className="text-lg">Cadastradas</Label>
                 <Input
                   type="number"
                   className="h-14 text-lg"
                   min={0}
                   value={habilitadas}
-                  onChange={(e) => setHabilitadas(Number(e.target.value))}
+                  onChange={(e) => setCadastradas(Number(e.target.value))}
                 />
               </div>
 
