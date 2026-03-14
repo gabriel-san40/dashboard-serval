@@ -283,7 +283,7 @@ export default function DashboardSky() {
   const progressoMeta = useMemo(() => {
     if (!metaData) return null;
     const total = stats.total;
-    const pct = Math.min(100, (total / metaData.total) * 100);
+    const pct = (total / metaData.total) * 100;
     return { meta: metaData.total, individuais: metaData.individuais, total, pct };
   }, [metaData, stats.total]);
 
@@ -499,7 +499,7 @@ export default function DashboardSky() {
                     </div>
                     {metaItem && metaItem.valor > 0 && (
                       <div className="mt-2 text-xl text-muted-foreground">
-                        {Math.min(100, (vendasCount / metaItem.valor) * 100).toFixed(0)}% da meta
+                        {((vendasCount / metaItem.valor) * 100).toFixed(0)}% da meta
                       </div>
                     )}
                   </>
@@ -572,7 +572,7 @@ export default function DashboardSky() {
                   <div className="text-5xl font-bold tracking-tight">{projecaoPosPago.projecao}</div>
                   <div className="mt-1 text-sm text-muted-foreground">
                     {projecaoPosPago.metaPosPago > 0
-                      ? `${Math.min(100, (projecaoPosPago.projecao / projecaoPosPago.metaPosPago) * 100).toFixed(0)}% da meta`
+                      ? `${((projecaoPosPago.projecao / projecaoPosPago.metaPosPago) * 100).toFixed(0)}% da meta`
                       : "Meta não configurada"}
                   </div>
                 </div>
