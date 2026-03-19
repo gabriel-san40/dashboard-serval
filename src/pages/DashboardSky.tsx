@@ -219,7 +219,6 @@ export default function DashboardSky() {
 
     const total = list.length;
     const comSeguro = list.filter((v) => v.seguro).length;
-    const percSeguro = total > 0 ? (comSeguro / total) * 100 : 0;
 
     const byVendedor = new Map<string, { nome: string; total: number }>();
     const byProduto = new Map<string, { nome: string; total: number }>();
@@ -245,8 +244,13 @@ export default function DashboardSky() {
       vendasPorProdutoNome[nome.toLowerCase()] = t;
     }
 
-    return { total, comSeguro, percSeguro, topVendedor, rankingVendedor, rankingProduto, vendasPorProdutoNome };
+    return { total, comSeguro, topVendedor, rankingVendedor, rankingProduto, vendasPorProdutoNome };
   }, [vendas]);
+
+  const percSeguro = useMemo(() => {
+    const habilitadas = statusData?.instaladas ?? 0;
+    return habilitadas > 0 ? (stats.comSeguro / habilitadas) * 100 : 0;
+  }, [stats.comSeguro, statusData]);
 
   const serieMensal = useMemo(() => {
     const list = vendas ?? [];
@@ -436,9 +440,9 @@ export default function DashboardSky() {
             <CardTitle className="text-xl">Seguro</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-6xl font-bold tracking-tight">{loadingVendas ? "—" : `${stats.percSeguro.toFixed(0)}%`}</div>
+            <div className="text-6xl font-bold tracking-tight">{loadingVendas || loadingStatus ? "—" : `${percSeguro.toFixed(0)}%`}</div>
             <div className="mt-2 text-base text-muted-foreground">
-              {loadingVendas ? "" : `${stats.comSeguro} com seguro / ${stats.total} total`}
+              {loadingVendas || loadingStatus ? "" : `${stats.comSeguro} com seguro / ${statusData?.instaladas ?? 0} habilitadas`}
             </div>
           </CardContent>
         </Card>
