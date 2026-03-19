@@ -354,6 +354,9 @@ export type Database = {
           habilitadas: number
           pagas: number
           instaladas: number
+          negadas: number
+          ag_pagamento: number
+          ag_habilitacao: number
           updated_by: string | null
           created_at: string
           updated_at: string
@@ -363,6 +366,9 @@ export type Database = {
           habilitadas?: number
           pagas?: number
           instaladas?: number
+          negadas?: number
+          ag_pagamento?: number
+          ag_habilitacao?: number
           updated_by?: string | null
           created_at?: string
           updated_at?: string
@@ -372,6 +378,9 @@ export type Database = {
           habilitadas?: number
           pagas?: number
           instaladas?: number
+          negadas?: number
+          ag_pagamento?: number
+          ag_habilitacao?: number
           updated_by?: string | null
           created_at?: string
           updated_at?: string

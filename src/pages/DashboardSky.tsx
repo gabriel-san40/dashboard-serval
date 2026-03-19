@@ -175,7 +175,7 @@ export default function DashboardSky() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("status")
-        .select("habilitadas, pagas, instaladas")
+        .select("habilitadas, pagas, instaladas, negadas, ag_pagamento, ag_habilitacao")
         .limit(1)
         .single();
 
@@ -510,7 +510,7 @@ export default function DashboardSky() {
         })}
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-3">
+      <section className="grid gap-6 lg:grid-cols-6">
         <Card className="p-2">
           <CardHeader>
             <CardTitle className="text-xl">Cadastradas</CardTitle>
@@ -535,11 +535,44 @@ export default function DashboardSky() {
 
         <Card className="p-2">
           <CardHeader>
-            <CardTitle className="text-xl">Instaladas</CardTitle>
+            <CardTitle className="text-xl">Habilitadas</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-6xl font-bold tracking-tight">
               {loadingStatus ? "—" : (statusData?.instaladas ?? 0)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="p-2">
+          <CardHeader>
+            <CardTitle className="text-xl">Negadas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-6xl font-bold tracking-tight">
+              {loadingStatus ? "—" : (statusData?.negadas ?? 0)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="p-2">
+          <CardHeader>
+            <CardTitle className="text-xl">AG-Pagamento</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-6xl font-bold tracking-tight">
+              {loadingStatus ? "—" : (statusData?.ag_pagamento ?? 0)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="p-2">
+          <CardHeader>
+            <CardTitle className="text-xl">AG-Habilitação</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-6xl font-bold tracking-tight">
+              {loadingStatus ? "—" : (statusData?.ag_habilitacao ?? 0)}
             </div>
           </CardContent>
         </Card>

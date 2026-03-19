@@ -15,7 +15,7 @@ export default function Status() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("status")
-        .select("id, habilitadas, pagas, instaladas")
+        .select("id, habilitadas, pagas, instaladas, negadas, ag_pagamento, ag_habilitacao")
         .limit(1)
         .single();
 
@@ -27,6 +27,9 @@ export default function Status() {
   const [habilitadas, setCadastradas] = useState(0);
   const [pagas, setPagas] = useState(0);
   const [instaladas, setInstaladas] = useState(0);
+  const [negadas, setNegadas] = useState(0);
+  const [agPagamento, setAgPagamento] = useState(0);
+  const [agHabilitacao, setAgHabilitacao] = useState(0);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -34,6 +37,9 @@ export default function Status() {
       setCadastradas(status.habilitadas);
       setPagas(status.pagas);
       setInstaladas(status.instaladas);
+      setNegadas(status.negadas);
+      setAgPagamento(status.ag_pagamento);
+      setAgHabilitacao(status.ag_habilitacao);
     }
   }, [status]);
 
@@ -47,6 +53,9 @@ export default function Status() {
           habilitadas,
           pagas,
           instaladas,
+          negadas,
+          ag_pagamento: agPagamento,
+          ag_habilitacao: agHabilitacao,
         })
         .eq("id", status.id);
 
@@ -67,7 +76,7 @@ export default function Status() {
         <h1 className="text-4xl font-bold tracking-tight">Status</h1>
       </header>
 
-      <Card className="max-w-lg">
+      <Card>
         <CardHeader>
           <CardTitle className="text-xl">Atualizar Status</CardTitle>
         </CardHeader>
@@ -76,41 +85,76 @@ export default function Status() {
             <div className="text-base text-muted-foreground">Carregando…</div>
           ) : (
             <>
-              <div className="space-y-2">
-                <Label className="text-lg">Cadastradas</Label>
-                <Input
-                  type="number"
-                  className="h-14 text-lg"
-                  min={0}
-                  value={habilitadas}
-                  onChange={(e) => setCadastradas(Number(e.target.value))}
-                />
-              </div>
+              <div className="grid grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-lg">Cadastradas</Label>
+                  <Input
+                    type="number"
+                    className="h-14 text-lg"
+                    min={0}
+                    value={habilitadas}
+                    onChange={(e) => setCadastradas(Number(e.target.value))}
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label className="text-lg">Pagas</Label>
-                <Input
-                  type="number"
-                  className="h-14 text-lg"
-                  min={0}
-                  value={pagas}
-                  onChange={(e) => setPagas(Number(e.target.value))}
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label className="text-lg">Pagas</Label>
+                  <Input
+                    type="number"
+                    className="h-14 text-lg"
+                    min={0}
+                    value={pagas}
+                    onChange={(e) => setPagas(Number(e.target.value))}
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label className="text-lg">Instaladas</Label>
-                <Input
-                  type="number"
-                  className="h-14 text-lg"
-                  min={0}
-                  value={instaladas}
-                  onChange={(e) => setInstaladas(Number(e.target.value))}
-                />
+                <div className="space-y-2">
+                  <Label className="text-lg">Habilitadas</Label>
+                  <Input
+                    type="number"
+                    className="h-14 text-lg"
+                    min={0}
+                    value={instaladas}
+                    onChange={(e) => setInstaladas(Number(e.target.value))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-lg">Negadas</Label>
+                  <Input
+                    type="number"
+                    className="h-14 text-lg"
+                    min={0}
+                    value={negadas}
+                    onChange={(e) => setNegadas(Number(e.target.value))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-lg">AG-Pagamento</Label>
+                  <Input
+                    type="number"
+                    className="h-14 text-lg"
+                    min={0}
+                    value={agPagamento}
+                    onChange={(e) => setAgPagamento(Number(e.target.value))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-lg">AG-Habilitação</Label>
+                  <Input
+                    type="number"
+                    className="h-14 text-lg"
+                    min={0}
+                    value={agHabilitacao}
+                    onChange={(e) => setAgHabilitacao(Number(e.target.value))}
+                  />
+                </div>
               </div>
 
               <Button
-                className="h-14 w-full text-lg"
+                className="h-14 px-12 text-lg"
                 onClick={handleSave}
                 disabled={saving}
               >
