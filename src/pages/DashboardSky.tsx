@@ -61,7 +61,10 @@ const META_CHAVES_SKY = [
   { chave: "meta_vendas_sky_sky_plus", label: "Sky+" },
   { chave: "meta_vendas_sky_pre_pago", label: "Pré Pago" },
   { chave: "meta_vendas_sky_parabolica", label: "Parabólica" },
+  { chave: "meta_vendas_sky_movel", label: "Sky Móvel" },
 ] as const;
+
+const META_CHAVE_SEGURO = "meta_vendas_sky_seguro";
 
 function toISODate(d: Date) {
   return format(d, "yyyy-MM-dd");
@@ -126,6 +129,22 @@ export default function DashboardSky() {
       const total = individuais.reduce((acc, i) => acc + i.valor, 0);
 
       return total > 0 ? { individuais, total } : null;
+    },
+  });
+
+  const { data: metaSeguro } = useQuery({
+    queryKey: ["sky", "meta_seguro"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("configuracoes")
+        .select("valor_numeric")
+        .eq("chave", META_CHAVE_SEGURO)
+        .eq("ativo", true)
+        .is("deleted_at", null)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data?.valor_numeric ?? 0;
     },
   });
 
@@ -205,6 +224,9 @@ export default function DashboardSky() {
           if (!next || META_CHAVES_SKY.some((m) => m.chave === next)) {
             qc.invalidateQueries({ queryKey: ["sky", "meta"] });
           }
+          if (!next || next === META_CHAVE_SEGURO) {
+            qc.invalidateQueries({ queryKey: ["sky", "meta_seguro"] });
+          }
         },
       )
       .subscribe();
@@ -237,14 +259,12 @@ export default function DashboardSky() {
     const rankingVendedor = Array.from(byVendedor.values()).sort((a, b) => b.total - a.total).slice(0, 5);
     const rankingProduto = Array.from(byProduto.values()).sort((a, b) => b.total - a.total).slice(0, 5);
 
-    const topVendedor = rankingVendedor[0]?.nome ?? "—";
-
     const vendasPorProdutoNome: Record<string, number> = {};
     for (const { nome, total: t } of byProduto.values()) {
       vendasPorProdutoNome[nome.toLowerCase()] = t;
     }
 
-    return { total, comSeguro, topVendedor, rankingVendedor, rankingProduto, vendasPorProdutoNome };
+    return { total, comSeguro, rankingVendedor, rankingProduto, vendasPorProdutoNome };
   }, [vendas]);
 
   const percSeguro = useMemo(() => {
@@ -424,7 +444,7 @@ export default function DashboardSky() {
         </div>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-4">
+      <section className="grid gap-6 lg:grid-cols-3">
         <Card className="p-2">
           <CardHeader>
             <CardTitle className="text-xl">Total no período</CardTitle>
@@ -444,16 +464,11 @@ export default function DashboardSky() {
             <div className="mt-2 text-base text-muted-foreground">
               {loadingVendas || loadingStatus ? "" : `${stats.comSeguro} com seguro / ${statusData?.instaladas ?? 0} habilitadas`}
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="p-2">
-          <CardHeader>
-            <CardTitle className="text-xl">Top vendedor</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-semibold leading-tight">{loadingVendas ? "—" : stats.topVendedor}</div>
-            <div className="mt-2 text-base text-muted-foreground">No período selecionado.</div>
+            {!loadingVendas && metaSeguro && metaSeguro > 0 ? (
+              <div className="mt-1 text-base text-muted-foreground">
+                {stats.comSeguro} / {metaSeguro} da meta ({((stats.comSeguro / metaSeguro) * 100).toFixed(0)}%)
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -478,7 +493,7 @@ export default function DashboardSky() {
         </Card>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-4">
+      <section className="grid gap-6 lg:grid-cols-5">
         {META_CHAVES_SKY.map((m) => {
           const metaItem = progressoMeta?.individuais.find((i) => i.label === m.label);
           const labelLower = m.label.toLowerCase();

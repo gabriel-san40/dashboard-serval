@@ -10,6 +10,8 @@ const META_KEYS = [
   { chave: "meta_vendas_sky_sky_plus", label: "Meta Sky Sky+" },
   { chave: "meta_vendas_sky_pre_pago", label: "Meta Sky Pré Pago" },
   { chave: "meta_vendas_sky_parabolica", label: "Meta Sky Parabólica" },
+  { chave: "meta_vendas_sky_movel", label: "Meta Sky Móvel" },
+  { chave: "meta_vendas_sky_seguro", label: "Meta Sky Seguro" },
   { chave: "meta_vendas_internet", label: "Meta de Vendas Internet" },
 ] as const;
 
